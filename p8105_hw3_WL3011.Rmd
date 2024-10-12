@@ -13,6 +13,7 @@ library(dplyr)
 library(knitr)
 library(kableExtra)
 library(ggplot2)
+library(patchwork) 
 ```
 
 ## Problem 1
@@ -103,24 +104,42 @@ avg_tmax_df = ny_noaa |>
     names_prefix = "month_"
   )
 
-# two-panel plot
-ggplot(avg_tmax_df, aes(x = year)) +
-  geom_line(aes(y = month_1, color = "January", group = id), size = .1) +
-  geom_line(aes(y = month_7, color = "July", group = id), size = .1) +
-  geom_point(aes(y = month_1, color = "January"), size = .2) +
-  geom_point(aes(y = month_7, color = "July"), size = .2) +
-  scale_color_manual(
-    values = c("January" = "skyblue", "July" = "orange"),
-    breaks = c("July", "January")  
-  ) +
+# Create separate plots for January and July
+
+# Plot for January
+p_january = ggplot(avg_tmax_df, aes(x = year)) +
+  geom_line(aes(y = month_1, color = id, group = id), size = .1) +
+  geom_point(aes(y = month_1, color = id), size = .2) +
   labs(
     x = "Year", 
     y = "Average Max Temperature (°C)", 
-    color = "Month") +
+    color = "Month",
+    title = "January"
+    ) +
+  guides(color = "none") +
   theme_minimal()
+  scale_color_discrete() 
+
+# Plot for July
+p_july = ggplot(avg_tmax_df, aes(x = year)) +
+  geom_line(aes(y = month_7, color = id, group = id), size = .1) +
+  geom_point(aes(y = month_7, color = id), size = .2) +
+  labs(
+    x = "Year", 
+    y = "Average Max Temperature (°C)", 
+    color = "Month",
+    title = "July"
+    ) +
+  guides(color = "none") +
+  theme_minimal() +
+  scale_color_discrete() 
+
+# Combine
+p_january + p_july
+
 ```
 
-Figure \@ref(fig:AMT) above shows a few patterns and observations stand out:
+Figure 2 above shows a few patterns and observations stand out:
 
 *   Seasonal Variation:
 
@@ -143,8 +162,67 @@ Compared to the July data, the January data fluctuated more between 1981 and 201
 
 
 
-### 1.3 Plot
-Make a two-panel plot showing (i) tmax vs tmin for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
+### 1.3 tmax vs Tmin
+
+
+Make a two-panel plot showing  (note that a scatterplot may not be the best option); 
+
+```{r MAXMIN, fig.cap="Figure 3. Density Plot of Maximum vs Minimum Temperature"}
+
+p_tmax = ggplot(ny_noaa, aes(x = tmax)) +
+  geom_density(fill = "orange", alpha = 0.5) +
+  labs(title = "Maximum Temperature",
+       x = "Maximum Temperature (°C)",
+       y = "Density") +
+  theme_minimal()
+
+p_tmin = ggplot(ny_noaa, aes(x = tmin)) +
+  geom_density(fill = "skyblue", alpha = 0.5) +
+  labs(title = "Minimum Temperature",
+       x = "Minimum Temperature (°C)",
+       y = "Density") +
+  theme_minimal()
+
+# Combine 
+p_tmin + p_tmax
+```
+
+```{r SNOWFALL_DENSITY, fig.cap="Figure 4. Density Plot of Maximum vs Minimum Temperature"}
+p_snowfall = df %>%
+  filter(snowfall > 0 & snowfall < 100) %>%
+  ggplot(aes(x = snowfall, fill = factor(year))) +
+  geom_histogram(position = "dodge", bins = 10, alpha = 0.7) +  # Histogram
+  labs(
+    title = "Distribution of Snowfall Values (0 < Snowfall < 100)",
+    x = "Snowfall (mm)",
+    y = "Frequency",
+    fill = "Year"
+  ) +
+  theme_minimal()
+```
+
+
+### 1.4 Distribution of Snowfall
+
+(ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
+
+```{r fig.width = 7, fig.height = 14, fig.cap="Distribution of Snowfall Values (0 < Snowfall < 100)"}
+p2 = ny_noaa |>
+  filter(snow > 0 & snow < 100) |>
+  ggplot(aes(x = snow, fill = factor(year))) +
+  geom_histogram(position = "dodge", bins = 10) +  
+  labs(
+    x = "Snowfall (mm)",
+    y = "Frequency",
+    fill = "Year"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") + 
+  facet_wrap(~ year, nrow = 6, ncol = 5) 
+
+print(p2)
+```
+
 
 ## II. Problem 2
 
