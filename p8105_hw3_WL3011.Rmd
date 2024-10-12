@@ -167,7 +167,7 @@ Compared to the July data, the January data fluctuated more between 1981 and 201
 
 Make a two-panel plot showing  (note that a scatterplot may not be the best option); 
 
-```{r MAXMIN, fig.cap="Figure 3. Density Plot of Maximum vs Minimum Temperature"}
+```{r MAXMIN, fig.cap="Figure 3. Density Plot of Maximum and Minimum Temperature"}
 
 p_tmax = ggplot(ny_noaa, aes(x = tmax)) +
   geom_density(fill = "orange", alpha = 0.5) +
@@ -185,20 +185,7 @@ p_tmin = ggplot(ny_noaa, aes(x = tmin)) +
 
 # Combine 
 p_tmin + p_tmax
-```
 
-```{r SNOWFALL_DENSITY, fig.cap="Figure 4. Density Plot of Maximum vs Minimum Temperature"}
-p_snowfall = df %>%
-  filter(snowfall > 0 & snowfall < 100) %>%
-  ggplot(aes(x = snowfall, fill = factor(year))) +
-  geom_histogram(position = "dodge", bins = 10, alpha = 0.7) +  # Histogram
-  labs(
-    title = "Distribution of Snowfall Values (0 < Snowfall < 100)",
-    x = "Snowfall (mm)",
-    y = "Frequency",
-    fill = "Year"
-  ) +
-  theme_minimal()
 ```
 
 
@@ -206,7 +193,7 @@ p_snowfall = df %>%
 
 (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
 
-```{r fig.width = 7, fig.height = 14, fig.cap="Distribution of Snowfall Values (0 < Snowfall < 100)"}
+```{r fig.width = 7, fig.height = 14, fig.cap="Figure 4. Distribution of Snowfall Values"}
 p2 = ny_noaa |>
   filter(snow > 0 & snow < 100) |>
   ggplot(aes(x = snow, fill = factor(year))) +
