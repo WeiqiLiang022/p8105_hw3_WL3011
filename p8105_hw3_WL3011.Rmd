@@ -108,7 +108,7 @@ avg_tmax_df = ny_noaa |>
 
 # Plot for January
 p_january = ggplot(avg_tmax_df, aes(x = year)) +
-  geom_line(aes(y = month_1, color = id, group = id), size = .1) +
+  geom_line(aes(y = month_1, color = id, group = id), size = .1, alpha = .7) +
   geom_point(aes(y = month_1, color = id), size = .2) +
   labs(
     x = "Year", 
@@ -122,7 +122,7 @@ p_january = ggplot(avg_tmax_df, aes(x = year)) +
 
 # Plot for July
 p_july = ggplot(avg_tmax_df, aes(x = year)) +
-  geom_line(aes(y = month_7, color = id, group = id), size = .1) +
+  geom_line(aes(y = month_7, color = id, group = id), size = .1, alpha = .7) +
   geom_point(aes(y = month_7, color = id), size = .2) +
   labs(
     x = "Year", 
@@ -135,7 +135,7 @@ p_july = ggplot(avg_tmax_df, aes(x = year)) +
   scale_color_discrete() 
 
 # Combine
-p_january + p_july
+p_july / p_january
 
 ```
 
@@ -224,17 +224,46 @@ print(p2)
 accel_df = 
   read.csv("./nhanes_accel.csv", 
            na = c("NA", ".", "")) |>
-  janitor::clean_names() 
+  janitor::clean_names() |>
+  drop_na() 
 
 covar_df = 
   read.csv("./nhanes_covar.csv", 
            na = c("NA", ".", ""), skip = 4) |>
-  janitor::clean_names() 
+  janitor::clean_names() |>
+  drop_na() |>
+  mutate(          
+    gender = case_match(
+      sex,
+      1 ~ "male",
+      2 ~ "female" 
+    )
+  ) |>
+  mutate(
+    category = case_match(
+      education,
+      1 ~ "Less_than_high_school",
+      2 ~ "High_school_equivalent",
+      3  ~ "More_than_high_school"
+    )
+  )
 
 nhanes_df = 
   inner_join(covar_df, accel_df, by = "seqn") |>
-  filter(age >= 21) |>
-  drop_na() |>
+  filter(age >= 21)
+  
+
+```
+
+### 2.2 Table for Participants' Number 
+
+The reader-friendly table for the number of men and women in each education category is as follows:
+
+```{r}
+num_sex_df = 
+  covar_df |>
+  count(sex, education, name = "number") |> 
+  arrange(sex, education) |>
   mutate(          
     sex = case_match(
       sex,
@@ -249,6 +278,152 @@ nhanes_df =
       2 ~ "High_school_equivalent",
       3  ~ "More_than_high_school"
     )
+  )
+
+
+
+kable(num_sex_df, 
+      col.names = c("Gender", "Education", "Number"),
+      caption = "Table 1. Number of Men and Women by Education Category")
+  
+```
+
+### 2.3 Age Distribution
+
+The plot consists of three facets representing the three education categories. Each facet shows the age distribution for men and women using overlapping density plots.
+
+```{r age_sex, fig.cap="Figure 5. Age Distributions by Sex and Education Category"}
+
+#label for the 3 small plot
+edu_labels = c(
+  "1" = "Less than high school",
+  "2" = "High school equivalent",
+  "3" = "More than high school"
+)
+
+ggplot(covar_df, aes(x = age, fill = gender)) +
+  geom_density(alpha = 0.3) + 
+  facet_wrap(~ education, nrow = 1, labeller = as_labeller(edu_labels)) +  
+  labs(
+    x = "Age", 
+    y = "Density",
+    fill = "sex"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+**Observations by Education Category:**
+
+1.  Less than High School:
+
+*   A prominent peak around age 70 is visible for both genders.
+
+*   Women generally have higher densities after age 50, suggesting a larger proportion of older women in this education level.
+
+2.  High School Equivalent:
+
+*   Both men and women show two peaks: one around age 30 and another around age 60.
+
+*   There seems to be a higher concentration of older individuals (60+) compared to younger ones for female group.
+
+
+3.  More than High School:
+
+*   There is a strong peak around age 30 for both men and women.
+
+*   After age 50, the densities decrease significantly, meaning fewer older individuals have education levels above high school.
+
+*   The distributions for men and women are very similar, though women show a slight advantage in the younger age group.
+
+**Gender Differences:**
+
+especially in the "High School Equivalent" category, male and female participants showed significant age differences, with younger males and older females significantly outnumbering those of the opposite sex at the same age.
+
+### 2.4 Total Activity
+
+Create a scatter plot with a smooth trend line meeting the following needs:
+
+*   Create a `total_activity` variable for each participant;
+
+*   Plot the `total_activity` against `age`, by `sex` and `education`.
+
+```{r total_activity, fig.width = 7, fig.height = 5, fig.cap="Figure 6. Total Activity vs Age by Gender and Education Level" }
+total_activity_df = 
+  nhanes_df |> 
+  group_by(seqn, gender, age, education) |> 
+ summarise(
+    total_activity = rowSums(across(starts_with("min")), na.rm = TRUE),
+    .groups = "drop"
+    )
+
+
+activity_plot = ggplot(total_activity_df, aes(x = age, y = total_activity, color = gender)) +
+  geom_point(alpha = 0.5) +  
+  geom_smooth(method = "loess", se = FALSE) +  
+  scale_y_continuous(
+    limits = c(4000, 22500), 
+    breaks = seq(5000, 20000, by = 5000) 
+  ) + 
+  facet_wrap(~ education, scales = "free_y", labeller = as_labeller(edu_labels)) + 
+  labs(
+    title = "",
+    x = "Age",
+    y = "Total Activity",
+    color = "Gender"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")
+
+print(activity_plot)
+```
+
+**Observations and Patterns:**
+
+Overall, across all education levels, total activity tends to decline with increasing age. Gender differences are consistent, with men generally being less active than women.
+
+1.  Less than High School:
+
+*  A clear decline in activity as age increases. Both men and women show a sharp drop after the age of 60.
+
+2.  High School Equivalent:
+
+*   Activity declines gradually, but there is an increase around age 70 before dropping again.
+
+3.  More than High School:
+
+Activity levels are lower for both men and women, especially in early adulthood. There is less variability, with a smoother decline across all ages.
+
+### 2.4 24-Hour Activity Time Courses
+
+```{r total, fig.width = 8, fig.height = 5, fig.cap="Figure 7. 24-Hour Activity Time Courses by Education Level and Gender"}
+
+summary_df = 
+  nhanes_df |>
+  pivot_longer(
+    min1:min1440,
+    names_to = "minute",
+    values_to = "min_value",
+    names_prefix = "min"
+    ) |>
+  mutate(minute = as.numeric(minute)) |>
+  group_by(minute, gender, education) |>
+  summarise(mean_min = mean(min_value)) 
+
+# Create the 3-panel plot
+ggplot(summary_df, aes(x = minute, y = mean_min, color = gender)) +
+  geom_point(alpha = 0.1) +  
+  geom_smooth(method = "loess", se = FALSE) +  
+  facet_wrap(~ education, nrow = 1, labeller = as_labeller(edu_labels)) + 
+  labs(
+    x = "Minutes",
+    y = "Mean Activity Level",
+     color = "gender"
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 12), 
+    plot.title = element_text(hjust = 0.5)  
   )
 
 ```
