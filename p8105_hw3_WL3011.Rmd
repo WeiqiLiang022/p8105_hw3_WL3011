@@ -259,7 +259,7 @@ nhanes_df =
 
 The reader-friendly table for the number of men and women in each education category is as follows:
 
-```{r message = FALSE, warning=FALSE, }
+```{r message = FALSE, warning=FALSE }
 num_sex_df = 
   covar_df |>
   count(sex, education, name = "number") |> 
@@ -434,5 +434,49 @@ ggplot(summary_df, aes(x = minute /60, y = mean_min, color = gender)) +
 
 
 ## III. Problem 3
+
+```{r message = FALSE, warning=FALSE}
+#read csv
+jan_2020 = read_csv("./citibike/Jan 2020 Citi.csv", 
+           na = c("NA", ".", "")) |>
+           janitor::clean_names() |>
+           mutate(year = 2020, month = "January")
+
+july_2020 = read_csv("./citibike/July 2020 Citi.csv", 
+           na = c("NA", ".", "")) |>
+           janitor::clean_names() |>
+           mutate(year = 2020, month = "July")
+
+jan_2024 = read_csv("./citibike/Jan 2024 Citi.csv", 
+           na = c("NA", ".", "")) |>
+           janitor::clean_names() |>
+           mutate(year = 2024, month = "January")
+
+july_2024 = read_csv("./citibike/July 2024 Citi.csv", 
+           na = c("NA", ".", "")) |>
+           janitor::clean_names() |>
+           mutate(year = 2024, month = "July")
+
+citibike_df = bind_rows(jan_2020, july_2020, jan_2024, july_2024) |>
+  relocate(year, month)
+
+```
+
+```{r}
+ride_counts = citibike_df |>
+  group_by(year, month, member_casual) |>
+  summarise(total_rides = n(), .groups = 'drop')
+
+ride_counts_wide = ride_counts |>
+  pivot_wider(
+    names_from = member_casual, 
+    values_from = total_rides, 
+    )
+
+kable(ride_counts_wide, 
+      col.names = c("Year", "Month", "Causal","Member"),
+      caption = "Table 2. Total Number of Rides of Casual Riders and Citi Bike Members")
+```
+
 
 
