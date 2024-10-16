@@ -11,14 +11,14 @@ always_allow_html: true
 library(tidyverse)
 library(dplyr)
 library(knitr)
-library(kableExtra)
 library(ggplot2)
 library(patchwork) 
+library(ggridges)
 ```
 
 ## Problem 1
 Firstly load the data.
-```{r}
+```{r message = FALSE, results='hide', warning=FALSE}
 library(p8105.datasets)
 data("ny_noaa")
 ```
@@ -37,7 +37,7 @@ Dataset **NY NOAA** has `r nrow(ny_noaa)` rows and `r ncol(ny_noaa)` columns, sh
 *   Create separate variables for year, month, and day.
 *   Convert `prcp`, `tmax`, `tmin` to standard units, i.e., mm and degree  Celsius, respectively.
 
-```{r}
+```{r message = FALSE, message = FALSE, warning=FALSE}
 # basic dataset: ny_noaa
 ny_noaa = ny_noaa |>
 
@@ -56,7 +56,7 @@ ny_noaa = ny_noaa |>
 
 ```
 
-```{r SNOW, fig.cap="Figure 1. Frequency of Zero and Non-Zero Snowfall(mm) by Month"}
+```{r SNOW, message = FALSE, warning=FALSE, fig.cap="Figure 1. Frequency of Zero and Non-Zero Snowfall(mm) by Month"}
 snowfall_frequency = ny_noaa |>
   count(snow, sort = TRUE)  # sort = TRUE means descending
 head(snowfall_frequency)
@@ -88,7 +88,7 @@ ggplot(snowfall_df, aes(x = month, y = n, fill = snowfall_category)) +
 
 Plot below shows the average max temperature in January and in July in each station across years. 
 
-```{r AMT, fig.cap="Figure 2. Average Max Temperature in January and July Across Years"}
+```{r AMT, message = FALSE, warning=FALSE, fig.cap="Figure 2. Average Max Temperature in January and July Across Years"}
 # each stations' average max temperature in January & July 
 avg_tmax_df = ny_noaa |> 
   filter(month == 1 | month == 7) |>
@@ -117,7 +117,7 @@ p_january = ggplot(avg_tmax_df, aes(x = year)) +
     title = "January"
     ) +
   guides(color = "none") +
-  theme_minimal()
+  theme_minimal() +
   scale_color_discrete() 
 
 # Plot for July
@@ -136,7 +136,6 @@ p_july = ggplot(avg_tmax_df, aes(x = year)) +
 
 # Combine
 p_july / p_january
-
 ```
 
 Figure 2 above shows a few patterns and observations stand out:
@@ -167,7 +166,7 @@ Compared to the July data, the January data fluctuated more between 1981 and 201
 
 Make a two-panel plot showing  (note that a scatterplot may not be the best option); 
 
-```{r MAXMIN, fig.cap="Figure 3. Density Plot of Maximum and Minimum Temperature"}
+```{r MAXMIN, message = FALSE, warning=FALSE, fig.cap="Figure 3. Density Plot of Maximum and Minimum Temperature"}
 
 p_tmax = ggplot(ny_noaa, aes(x = tmax)) +
   geom_density(fill = "orange", alpha = 0.5) +
@@ -185,7 +184,6 @@ p_tmin = ggplot(ny_noaa, aes(x = tmin)) +
 
 # Combine 
 p_tmin + p_tmax
-
 ```
 
 
@@ -193,19 +191,23 @@ p_tmin + p_tmax
 
 (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
 
-```{r fig.width = 7, fig.height = 14, fig.cap="Figure 4. Distribution of Snowfall Values"}
+```{r message = FALSE, warning=FALSE, fig.width = 7, fig.height = 7, fig.cap="Figure 4. Annual Snowfall Values Distribution"}
+library(ggridges)
+
 p2 = ny_noaa |>
   filter(snow > 0 & snow < 100) |>
-  ggplot(aes(x = snow, fill = factor(year))) +
-  geom_histogram(position = "dodge", bins = 10) +  
+  ggplot(aes(x = snow, y = year, fill = factor(year))) +
+  geom_density_ridges(scale = 1.5, rel_min_height = 0.01) +  
   labs(
     x = "Snowfall (mm)",
-    y = "Frequency",
+    y = "Year",
     fill = "Year"
   ) +
+  scale_y_continuous(
+    breaks = seq(1980, 2010, by = 5) 
+  ) + 
   theme_minimal() +
-  theme(legend.position = "none") + 
-  facet_wrap(~ year, nrow = 6, ncol = 5) 
+  theme(legend.position = "none")
 
 print(p2)
 ```
@@ -220,15 +222,15 @@ print(p2)
 *   Exclude participants with missing demographic data;  
 *   Encode data with reasonable variable classes (i.e. not numeric, and using factors with the ordering of tables and plots in mind).
 
-```{r}
+```{r message = FALSE, warning=FALSE}
 accel_df = 
-  read.csv("./nhanes_accel.csv", 
+  read_csv("./nhanes_accel.csv", 
            na = c("NA", ".", "")) |>
   janitor::clean_names() |>
   drop_na() 
 
 covar_df = 
-  read.csv("./nhanes_covar.csv", 
+  read_csv("./nhanes_covar.csv", 
            na = c("NA", ".", ""), skip = 4) |>
   janitor::clean_names() |>
   drop_na() |>
@@ -251,15 +253,13 @@ covar_df =
 nhanes_df = 
   inner_join(covar_df, accel_df, by = "seqn") |>
   filter(age >= 21)
-  
-
 ```
 
 ### 2.2 Table for Participants' Number 
 
 The reader-friendly table for the number of men and women in each education category is as follows:
 
-```{r}
+```{r message = FALSE, warning=FALSE, }
 num_sex_df = 
   covar_df |>
   count(sex, education, name = "number") |> 
@@ -280,19 +280,16 @@ num_sex_df =
     )
   )
 
-
-
 kable(num_sex_df, 
       col.names = c("Gender", "Education", "Number"),
       caption = "Table 1. Number of Men and Women by Education Category")
-  
 ```
 
 ### 2.3 Age Distribution
 
 The plot consists of three facets representing the three education categories. Each facet shows the age distribution for men and women using overlapping density plots.
 
-```{r age_sex, fig.cap="Figure 5. Age Distributions by Sex and Education Category"}
+```{r message = FALSE, warning=FALSE,  age_sex, fig.cap="Figure 5. Age Distributions by Sex and Education Category"}
 
 #label for the 3 small plot
 edu_labels = c(
@@ -348,7 +345,7 @@ Create a scatter plot with a smooth trend line meeting the following needs:
 
 *   Plot the `total_activity` against `age`, by `sex` and `education`.
 
-```{r total_activity, fig.width = 7, fig.height = 5, fig.cap="Figure 6. Total Activity vs Age by Gender and Education Level" }
+```{r total_activity, message = FALSE, warning=FALSE, fig.width = 7, fig.height = 5, fig.cap="Figure 6. Total Activity vs Age by Gender and Education Level" }
 total_activity_df = 
   nhanes_df |> 
   group_by(seqn, gender, age, education) |> 
@@ -356,7 +353,6 @@ total_activity_df =
     total_activity = rowSums(across(starts_with("min")), na.rm = TRUE),
     .groups = "drop"
     )
-
 
 activity_plot = ggplot(total_activity_df, aes(x = age, y = total_activity, color = gender)) +
   geom_point(alpha = 0.5) +  
@@ -396,7 +392,7 @@ Activity levels are lower for both men and women, especially in early adulthood.
 
 ### 2.4 24-Hour Activity Time Courses
 
-```{r total, fig.width = 8, fig.height = 5, fig.cap="Figure 7. 24-Hour Activity Time Courses by Education Level and Gender"}
+```{r total, message = FALSE, warning=FALSE,  fig.width = 8, fig.height = 5, fig.cap="Figure 7. 24-Hour Activity Time Courses by Education Level and Gender"}
 
 summary_df = 
   nhanes_df |>
@@ -411,22 +407,30 @@ summary_df =
   summarise(mean_min = mean(min_value)) 
 
 # Create the 3-panel plot
-ggplot(summary_df, aes(x = minute, y = mean_min, color = gender)) +
+ggplot(summary_df, aes(x = minute /60, y = mean_min, color = gender)) +
   geom_point(alpha = 0.1) +  
   geom_smooth(method = "loess", se = FALSE) +  
   facet_wrap(~ education, nrow = 1, labeller = as_labeller(edu_labels)) + 
   labs(
-    x = "Minutes",
+    x = "Hour of the Day",
     y = "Mean Activity Level",
      color = "gender"
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 24, by = 4),  
+    labels = seq(0, 24, by = 4), 
+    limits = c(0, 24)  
   ) +
   theme_minimal() +
   theme(
     strip.text = element_text(size = 12), 
     plot.title = element_text(hjust = 0.5)  
   )
-
 ```
+
+*   In all educational levels, it is clear that activity levels increase in the morning, peak in the afternoon (with a a little drop in between), and gradually decline in the evening.
+
+*   Across all three educational categories, females tend to have slightly higher activity levels during the peak hours compared to males. 
 
 
 ## III. Problem 3
